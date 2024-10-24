@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
 """ simple class with basic redis """
 import redis
 import uuid
-from typing import Union
+from typing import Union, Callable, Optional
 
 class Cache:
     def __init__(self):
@@ -31,3 +32,18 @@ class Cache:
         self._redis.set(key, data)
         
         return key
+
+    def get(self, key: str, fn: Optional[Callable] = None) -> Union[str, bytes, int, float]:
+        """get data"""
+        data = self._redis.get(key)
+        if fn is not None:
+            data = fn(data)
+        return data
+    
+    def get_str(self, key: str) -> str:
+        """get_str"""
+        return self.get(key, fn=str)
+    
+    def get_int(self, key: int) -> int:
+        """get_int"""
+        return self.get(key, fn=int)
