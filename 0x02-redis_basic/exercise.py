@@ -5,6 +5,36 @@
 import redis
 import uuid
 from typing import Union, Callable, Optional
+from functools import wraps
+
+def call_history(method: Callable) -> Callable:
+    """ store history of inputs and outputs"""
+    @wraps(method)
+    def wrapper(self, *args, **kwargs):
+        """ wrapper function"""
+        name = method.__qualname__
+        input_key = name + ":inputs"
+        output_key = name + ":outputs"
+
+        input_value = str(args)
+        self._redis.rpush(input_key, input_value)
+
+        output_value = str(method(self, *args, **kwargs))
+
+        self._redis.rpush(output_key, output_value)
+
+        return output_value
+    return wrapper
+
+def count_calls(method: Callable) -> Callable:
+    """count number of times caches are called"""
+    @wraps(method)
+    def wrapper(self, *args, **kwargs):
+        """wrapper function"""
+        key = method.__qualname__ 
+        self._redis.incr(key)
+        return method(self, *args, **kwargs)
+    return wrapper
 
 class Cache:
     def __init__(self):
@@ -14,7 +44,9 @@ class Cache:
         """
         self._redis = redis.Redis()
         self._redis.flushdb()
-    
+
+    @count_calls    
+    @count_calls
     def store(self, data:Union[str, bytes, int, float]) -> str:
         """
         Store the input data in Redis using a randomly generated key.
